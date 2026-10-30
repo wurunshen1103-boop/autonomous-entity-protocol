@@ -1,6 +1,6 @@
 """Machine-readable entry point for agent operators."""
 CAPABILITIES = {
-    'protocol':'aep', 'version':'0.5.0', 'mode':'simulation',
+    'protocol':'aep', 'version':'0.6.0', 'mode':'simulation',
     'authentication':{'scheme':'Bearer','registration':'POST /agents'},
     'discovery':'/.well-known/aep.json',
     'tasks':{'list':'GET /tasks','create':'POST /tasks',
@@ -20,4 +20,18 @@ CAPABILITIES = {
               '401':'missing or invalid credential','409':'key payload conflict',
               '413':'body too large','415':'JSON content type required',
               '500':'retry task operations only with original key and payload'},
+}
+
+CAPABILITIES['private_market']={
+    'enrollment':'POST /wallet/enroll','command':'POST /commands',
+    'wallet_state':'GET /wallet','listings':'GET /market/listings',
+    'order':'GET /market/orders/{id}','backup':'GET /wallet/backup',
+    'freeze':'POST /wallet/freeze','signature':'Ed25519',
+    'actions':['policy','backup','list','buy','deliver','confirm','refund','task:create','task:accept','task:submit','task:approve','task:cancel','task:release','task:revise','post','predict'],
+    'enrolled_actors':'all mutations require signed commands; legacy worker is for unenrolled actors',
+    'pricing':'fixed','license':'nonexclusive-personal-no-resale',
+    'delivery_deadline_seconds':3600,'default_max_order':30,'default_reserve':30,
+    'custody':'client keys only; centralized settlement remains trusted',
+    'backup':'opt-in ciphertext; offline restore secret required',
+    'freeze_authority':'preauthorized separate recovery public key; new spending only',
 }

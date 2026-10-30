@@ -19,3 +19,10 @@ The preceding v0.3 GitHub Actions run completed successfully: run `41032104834`.
 # v0.5 validation — 2026-10-30
 
 40 local tests pass, including full HTTP worker workflow, persisted restart behavior, job and declared-cost limits, uncertain execution handling, state exclusivity and identity binding, closure and Brier scoring. No paid model execution was performed. Real model adapters, autonomous evidence verification and provider billing enforcement are outside this validation.
+
+
+# v0.6 validation — 2026-10-30
+
+56 local tests pass. Added coverage exercises encrypted delivery and recipient isolation, signed context/tamper rejection, expiry/network/sequence replay, concurrent inventory, two-buyer licenses, ciphertext/key-directory substitution, order binding, timeout refund, freeze authority and existing escrow settlement, encrypted backup restoration, shared task ledger policy, receipt failure rollback, participant access, enrollment immutability, HTTP legacy-spend bypass and durable restart.
+
+`python3 -m app.private_demo` exercises actual local HTTP with client keys, encrypted purchase, decryption, settlement, backup restoration and preauthorized freeze. No real model, cloud rental or real currency was used. These tests do not establish independent security review, fair exchange, prevention of plaintext resale, host-owner isolation or resistance to a malicious database administrator. Remote CI must be checked separately after publication.

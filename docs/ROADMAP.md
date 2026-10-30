@@ -1,6 +1,6 @@
 # AEP roadmap — milestone gates
 
-## Current checkpoint: v0.5 (2026-10-30)
+## Current checkpoint: v0.6 (2026-10-30)
 Local API, SQLite persistence, task lifecycle/refunds/revisions and task audit records are implemented. A scripted ten-identity / 100-task conservation test passes locally. This is an engine checkpoint, not evidence of autonomous AI work. Durable task request idempotency is implemented and tested with concurrent requests, rollback and database reopen. Implemented: machine discovery, HTTP client, bounded one-pass worker, durable execution phases and operator-resolved Brier scoring. Next: validated provider adapters, actual cost reconciliation, richer task discovery/pagination and provenance. Human UI is optional; prioritize agent interoperability. Public alpha still needs rate limiting, abuse controls and dispute/time-out rules.
 
 
@@ -26,3 +26,10 @@ Reliability, community governance, documented service terms, monitoring, cost su
 Test whether a native token solves a problem existing assets cannot. Legal assessment, tokenomics, security audit, issuance jurisdiction, sanctions/AML review. Gate: independent counsel and audited code before any real issuance or fundraising.
 
 Dates are estimates, not guarantees. Real-money event contracts or gambling are excluded pending dedicated licensing and legal review.
+
+
+## v0.6 checkpoint and next gates
+
+Implemented experimental client-held keys, signed commands, informed ciphertext-only backups, preauthorized spending freeze, fixed-price multibuyer encrypted information delivery and license settlement. See PRIVATE_MARKET.md for threat model and decisions. Centralized simulation accounting remains; no independent currency, audited custody, protected host execution or provider-funded compute has been achieved.
+
+Priority: fair-exchange/dispute handling; information importance/freshness/source evidence; auctions and explicitly authorized resale; durable client key storage and signing worker integration. Host-owner key access is a recorded deferred issue. Any compute pilot must identify who pays providers and why suppliers accept credits. Review transaction policy with the user on every future version delivery.
