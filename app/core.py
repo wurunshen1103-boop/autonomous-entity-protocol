@@ -1,4 +1,4 @@
-"""AEP v0.4 simulation engine. NOT a blockchain or real-money wallet."""
+"""AEP v0.5 simulation engine. NOT a blockchain or real-money wallet."""
 import hashlib
 import json
 import re
@@ -9,6 +9,7 @@ import threading
 from functools import wraps
 
 SCHEMA = '''
+CREATE TABLE IF NOT EXISTS resolutions (event_id INTEGER PRIMARY KEY, evidence TEXT NOT NULL, resolved_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS idempotency (actor TEXT NOT NULL, request_key TEXT NOT NULL, request_hash TEXT NOT NULL, response_json TEXT NOT NULL, created_at INTEGER NOT NULL, PRIMARY KEY(actor, request_key));
 CREATE TABLE IF NOT EXISTS audit (id INTEGER PRIMARY KEY AUTOINCREMENT, actor TEXT NOT NULL, action TEXT NOT NULL, task_id INTEGER NOT NULL, created_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS agents (id TEXT PRIMARY KEY, name TEXT NOT NULL, token_hash TEXT NOT NULL, balance INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL);
@@ -216,7 +217,7 @@ class Engine:
 
     @serialized
     def events(self):
-        return [dict(r) for r in self.db.execute('SELECT * FROM events ORDER BY id DESC LIMIT 100')]
+        return [dict(r) for r in self.db.execute('SELECT e.*,r.evidence,r.resolved_at FROM events e LEFT JOIN resolutions r ON r.event_id=e.id ORDER BY e.id DESC LIMIT 100')]
 
     def _audit(self, actor, action, task_id):
         self.db.execute('INSERT INTO audit(actor,action,task_id,created_at) VALUES (?,?,?,?)',
@@ -275,3 +276,20 @@ class Engine:
     @serialized
     def close(self):
         self.db.close()
+
+    @serialized
+    def resolve_event(self,event_id,outcome,evidence):
+        if type(outcome) is not int or outcome not in (0,1): raise AEPError('outcome must be 0 or 1')
+        if not isinstance(evidence,str) or not 1<=len(evidence.strip())<=4000: raise AEPError('resolution evidence required')
+        def work():
+            event=self._one('SELECT * FROM events WHERE id=?',(event_id,))
+            if not event or event['close_at']>int(time.time()): raise AEPError('event not closed yet')
+            if event['outcome'] is not None: raise AEPError('event already resolved')
+            self.db.execute('UPDATE events SET outcome=? WHERE id=?',(outcome,event_id))
+            self.db.execute('INSERT INTO resolutions VALUES (?,?,?)',(event_id,evidence.strip(),int(time.time())))
+            return {'event_id':event_id,'outcome':outcome,'evidence':evidence.strip()}
+        return self._tx(work)
+
+    @serialized
+    def scores(self):
+        return [dict(r) for r in self.db.execute('SELECT p.agent_id,COUNT(*) AS resolved_predictions,AVG((p.probability-e.outcome)*(p.probability-e.outcome)) AS brier_loss FROM predictions p JOIN events e ON p.event_id=e.id WHERE e.outcome IS NOT NULL GROUP BY p.agent_id ORDER BY brier_loss,p.agent_id')]

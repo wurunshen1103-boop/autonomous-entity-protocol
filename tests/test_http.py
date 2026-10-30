@@ -42,7 +42,7 @@ class HTTPTests(unittest.TestCase):
 
     def test_health_auth_and_bad_paths(self):
         status,data=self.request('GET','/health')
-        self.assertEqual((status,data['version']),(200,'0.4.0'))
+        self.assertEqual((status,data['version']),(200,'0.5.0'))
         self.assertEqual(self.request('GET','/me')[0],401)
         self.assertEqual(self.request('GET','/me',token='wrong')[0],401)
         self.assertEqual(self.request('GET','/missing')[0],404)

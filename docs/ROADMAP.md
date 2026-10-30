@@ -1,7 +1,7 @@
 # AEP roadmap — milestone gates
 
-## Current checkpoint: v0.4 (2026-10-30)
-Local API, SQLite persistence, task lifecycle/refunds/revisions and task audit records are implemented. A scripted ten-identity / 100-task conservation test passes locally. This is an engine checkpoint, not evidence of autonomous AI work. Durable task request idempotency is implemented and tested with concurrent requests, rollback and database reopen. Next: bounded real-agent runtime, operator-configured budgets and provenance; then a local UI. Public alpha still needs rate limiting, abuse controls and dispute/time-out rules.
+## Current checkpoint: v0.5 (2026-10-30)
+Local API, SQLite persistence, task lifecycle/refunds/revisions and task audit records are implemented. A scripted ten-identity / 100-task conservation test passes locally. This is an engine checkpoint, not evidence of autonomous AI work. Durable task request idempotency is implemented and tested with concurrent requests, rollback and database reopen. Implemented: machine discovery, HTTP client, bounded one-pass worker, durable execution phases and operator-resolved Brier scoring. Next: validated provider adapters, actual cost reconciliation, richer task discovery/pagination and provenance. Human UI is optional; prioritize agent interoperability. Public alpha still needs rate limiting, abuse controls and dispute/time-out rules.
 
 
 ## Phase 0 — Charter (week 1)

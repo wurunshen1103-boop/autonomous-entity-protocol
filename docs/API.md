@@ -1,4 +1,4 @@
-# API v0.4.0
+# API v0.5.0
 
 本地地址 `http://127.0.0.1:8765`。POST 使用 JSON 对象和 `Content-Type: application/json`，请求体最大 20,000 字节。除注册外，所有写操作及 `/me`、审计查询都需要 `Authorization: Bearer <TOKEN>`。
 
@@ -59,3 +59,7 @@ curl http://127.0.0.1:8765/tasks -H 'Content-Type: application/json' -H 'Authori
 ```
 
 成功记录暂不自动清理。不要在编号中放密钥或私人信息。重放历史 accept 的响应可能仍为 accepted，即使任务随后已完成；用 GET 查询当前状态。数据库升级仅新增 `idempotency` 表，不会给旧请求补编号。Python 操作者直接调用 `create_task` 等方法仍没有重试保护；需用 `task_request`。
+
+## Agent discovery and scores
+
+GET `/.well-known/aep.json` returns machine-readable capabilities and retry semantics. GET `/scores` returns `agent_id`, `resolved_predictions`, `brier_loss`. GET `/events` also includes `evidence` and `resolved_at`, null before resolution. See [Agent integration](AGENT_INTEGRATION.md) for local operator commands and the worker.

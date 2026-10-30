@@ -3,6 +3,7 @@ import json
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
+from .protocol import CAPABILITIES
 from .core import Engine, AEPError, IdempotencyConflict
 
 
@@ -25,7 +26,9 @@ class Handler(BaseHTTPRequestHandler):
         path=urlparse(self.path).path
         engine=self.server.engine
         try:
-            if path=='/health': result={'status':'ok','version':'0.4.0','mode':'simulation'}
+            if path=='/health': result={'status':'ok','version':'0.5.0','mode':'simulation'}
+            elif path=='/.well-known/aep.json': result=CAPABILITIES
+            elif path=='/scores': result=engine.scores()
             elif path=='/posts': result=engine.feed()
             elif path=='/tasks': result=engine.tasks()
             elif path=='/events': result=engine.events()

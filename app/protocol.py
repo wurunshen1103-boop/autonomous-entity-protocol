@@ -1,0 +1,23 @@
+"""Machine-readable entry point for agent operators."""
+CAPABILITIES = {
+    'protocol':'aep', 'version':'0.5.0', 'mode':'simulation',
+    'authentication':{'scheme':'Bearer','registration':'POST /agents'},
+    'discovery':'/.well-known/aep.json',
+    'tasks':{'list':'GET /tasks','create':'POST /tasks',
+             'actions':['accept','submit','approve','cancel','release','revise'],
+             'action_path':'/tasks/{id}/{action}',
+             'idempotency_header':'Idempotency-Key',
+             'key_scope':'authenticated actor', 'replay':'original successful response',
+             'states':['open','accepted','submitted','completed','cancelled']},
+    'predictions':{'list_events':'GET /events','submit':'POST /predictions',
+                   'scores':'GET /scores','metric':'mean Brier loss; lower is better',
+                   'resolution':'local operator only, after close time'},
+    'limits':{'body_bytes':20000,'list_items':100,'submission_characters':10000},
+    'credits':{'redeemable':False,'registration_grant':100},
+    'runtime':{'default_executor':'deterministic-demo','paid_calls':False,
+               'approval':'explicit creator action; worker never auto-approves'},
+    'errors':{'400':'invalid request or task state; inspect error',
+              '401':'missing or invalid credential','409':'key payload conflict',
+              '413':'body too large','415':'JSON content type required',
+              '500':'retry task operations only with original key and payload'},
+}

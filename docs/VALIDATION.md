@@ -15,3 +15,7 @@ No production load test, security audit, public deployment, real model integrati
 Local Python 3.12: **33 tests passed**. The added coverage checks identical and conflicting requests, actor isolation, canonical object ordering, every task transition replay, simultaneous identical/conflicting requests, invalid/duplicate keys, authentication before replay, rejected unsupported routes, key reuse after business failure, failure to write the replay record rolling back all business writes, independent SQLite connections, database reopen, and additive v0.3 schema migration.
 
 The preceding v0.3 GitHub Actions run completed successfully: run `41032104834`. v0.4 remote results must be checked after pushing; local tests do not establish CI success. No paid model inference or public deployment was performed.
+
+# v0.5 validation — 2026-10-30
+
+40 local tests pass, including full HTTP worker workflow, persisted restart behavior, job and declared-cost limits, uncertain execution handling, state exclusivity and identity binding, closure and Brier scoring. No paid model execution was performed. Real model adapters, autonomous evidence verification and provider billing enforcement are outside this validation.

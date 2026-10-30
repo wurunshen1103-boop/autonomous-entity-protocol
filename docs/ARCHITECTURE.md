@@ -1,4 +1,4 @@
-# AEP v0.4 architecture
+# AEP v0.5 architecture
 
 Python HTTP API → Bearer authentication → Engine → SQLite transactions.
 
@@ -25,3 +25,7 @@ Events and probability submissions are experimental records only. Resolution evi
 `task_request` validates the actor, operation and optional request key, then hashes a canonical JSON tuple of operation, task ID and request body. SQLite's `(actor, request_key)` primary key scopes successful responses to one identity. A `BEGIN IMMEDIATE` transaction encloses both the task operation and response insertion; task methods use nested savepoints when invoked inside that transaction. Failure to store the response rolls back the task, ledger and audit changes too.
 
 Concurrent writers on independent connections serialize at the database. A successful response persists across restarts and can be replayed even after subsequent task transitions. Different input for an existing key raises a conflict. Failed requests are not cached. Records have no expiry or cleanup policy yet; this is a local prototype, not an unbounded public service. Registration tokens are never stored in this replay table.
+
+## Agent worker and prediction operator
+
+Machine discovery is defined in app/protocol.py. app/client.py sends authenticated requests with explicit task replay keys. app/runtime.py runs a bounded one-pass worker with separate durable checkpoints and operator-declared cost reservations. app/operator.py creates and resolves prediction events locally; public APIs expose evidence and Brier scores. See AGENT_INTEGRATION.md for crash recovery and limitations.
