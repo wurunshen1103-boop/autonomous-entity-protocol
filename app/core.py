@@ -1,5 +1,7 @@
-"""AEP v0.3 simulation engine. NOT a blockchain or real-money wallet."""
+"""AEP v0.4 simulation engine. NOT a blockchain or real-money wallet."""
 import hashlib
+import json
+import re
 import secrets
 import sqlite3
 import time
@@ -7,6 +9,7 @@ import threading
 from functools import wraps
 
 SCHEMA = '''
+CREATE TABLE IF NOT EXISTS idempotency (actor TEXT NOT NULL, request_key TEXT NOT NULL, request_hash TEXT NOT NULL, response_json TEXT NOT NULL, created_at INTEGER NOT NULL, PRIMARY KEY(actor, request_key));
 CREATE TABLE IF NOT EXISTS audit (id INTEGER PRIMARY KEY AUTOINCREMENT, actor TEXT NOT NULL, action TEXT NOT NULL, task_id INTEGER NOT NULL, created_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS agents (id TEXT PRIMARY KEY, name TEXT NOT NULL, token_hash TEXT NOT NULL, balance INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS posts (id INTEGER PRIMARY KEY AUTOINCREMENT, agent_id TEXT NOT NULL, body TEXT NOT NULL, created_at INTEGER NOT NULL);
@@ -16,6 +19,7 @@ CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, questio
 CREATE TABLE IF NOT EXISTS predictions (id INTEGER PRIMARY KEY AUTOINCREMENT, event_id INTEGER NOT NULL, agent_id TEXT NOT NULL, probability REAL NOT NULL, rationale TEXT NOT NULL, created_at INTEGER NOT NULL, UNIQUE(event_id, agent_id));
 '''
 class AEPError(ValueError): pass
+class IdempotencyConflict(AEPError): pass
 
 def serialized(fn):
     """One shared SQLite connection must not interleave request transactions."""
@@ -38,6 +42,19 @@ class Engine:
         return dict(row) if row else None
 
     def _tx(self, fn):
+        # Task methods may run inside the idempotent request's outer transaction.
+        # A savepoint never commits that outer transaction.
+        if self.db.in_transaction:
+            name='nested_'+secrets.token_hex(8)
+            self.db.execute('SAVEPOINT '+name)
+            try:
+                result=fn()
+                self.db.execute('RELEASE SAVEPOINT '+name)
+                return result
+            except Exception:
+                self.db.execute('ROLLBACK TO SAVEPOINT '+name)
+                self.db.execute('RELEASE SAVEPOINT '+name)
+                raise
         self.db.execute('BEGIN IMMEDIATE')
         try:
             result = fn()
@@ -46,6 +63,44 @@ class Engine:
         except Exception:
             self.db.execute('ROLLBACK')
             raise
+
+    @serialized
+    def task_request(self, actor, action, data, task_id=None, request_key=None):
+        """Replay successful task requests atomically, scoped to an authenticated actor.
+
+        Keys have no expiry. Replays return the original response, not current task
+        state. Failed requests do not reserve keys. Direct task methods remain
+        available for local operators and do not provide replay protection.
+        """
+        self.profile(actor)
+        if not isinstance(data,dict): raise AEPError('JSON object required')
+        if action=='create' and task_id is None:
+            call=lambda:self.create_task(actor,data.get('title'),data.get('description'),data.get('reward'))
+        elif action in ('accept','submit','approve','cancel','release','revise') and type(task_id) is int and task_id>0:
+            if action=='submit': call=lambda:self.submit(actor,task_id,data.get('submission'))
+            else: call=lambda:getattr(self,action)(actor,task_id)
+        else:
+            raise AEPError('invalid task operation')
+        if request_key is None:
+            return call()
+        if not isinstance(request_key,str) or not re.fullmatch(r'[A-Za-z0-9._:-]{1,128}',request_key):
+            raise AEPError('Idempotency-Key must be 1-128 ASCII letters, digits, dot, underscore, colon or hyphen')
+        try:
+            canonical=json.dumps([action,task_id,data],sort_keys=True,separators=(',',':'),ensure_ascii=True,allow_nan=False)
+        except (ValueError,TypeError):
+            raise AEPError('request must contain valid finite JSON values')
+        digest=hashlib.sha256(canonical.encode()).hexdigest()
+        def work():
+            previous=self._one('SELECT request_hash,response_json FROM idempotency WHERE actor=? AND request_key=?',(actor,request_key))
+            if previous:
+                if previous['request_hash']!=digest:
+                    raise IdempotencyConflict('Idempotency-Key already used for a different task request')
+                return json.loads(previous['response_json'])
+            result=call()
+            self.db.execute('INSERT INTO idempotency VALUES (?,?,?,?,?)',
+                            (actor,request_key,digest,json.dumps(result,allow_nan=False),int(time.time())))
+            return result
+        return self._tx(work)
 
     @serialized
     def register(self, name):

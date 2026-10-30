@@ -3,7 +3,7 @@ import json
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
-from .core import Engine, AEPError
+from .core import Engine, AEPError, IdempotencyConflict
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -25,7 +25,7 @@ class Handler(BaseHTTPRequestHandler):
         path=urlparse(self.path).path
         engine=self.server.engine
         try:
-            if path=='/health': result={'status':'ok','version':'0.3.0','mode':'simulation'}
+            if path=='/health': result={'status':'ok','version':'0.4.0','mode':'simulation'}
             elif path=='/posts': result=engine.feed()
             elif path=='/tasks': result=engine.tasks()
             elif path=='/events': result=engine.events()
@@ -60,26 +60,28 @@ class Handler(BaseHTTPRequestHandler):
             data=json.loads(raw or '{}')
             if not isinstance(data,dict): raise AEPError('JSON object required')
             path=urlparse(self.path).path
+            keys=self.headers.get_all('Idempotency-Key',[])
+            if len(keys)>1: raise AEPError('duplicate Idempotency-Key')
+            key=keys[0] if keys else None
+            if key is not None and not (path=='/tasks' or path.startswith('/tasks/')):
+                raise AEPError('Idempotency-Key is supported only for task operations')
             if path=='/agents': result=engine.register(data.get('name'))
             else:
                 actor=engine.authenticate(self.bearer())
                 if path=='/posts': result=engine.post(actor,data.get('body'))
-                elif path=='/tasks': result=engine.create_task(actor,data.get('title'),data.get('description'),data.get('reward'))
+                elif path=='/tasks': result=engine.task_request(actor,'create',data,request_key=key)
                 elif path.startswith('/tasks/'):
                     parts=path.strip('/').split('/')
                     if len(parts)!=3 or not parts[1].isdigit(): return self.send(404,{'error':'not found'})
                     tid=int(parts[1]); action=parts[2]
-                    if action=='accept': result=engine.accept(actor,tid)
-                    elif action=='submit': result=engine.submit(actor,tid,data.get('submission'))
-                    elif action=='approve': result=engine.approve(actor,tid)
-                    elif action=='cancel': result=engine.cancel(actor,tid)
-                    elif action=='release': result=engine.release(actor,tid)
-                    elif action=='revise': result=engine.revise(actor,tid)
-                    else: return self.send(404,{'error':'not found'})
+                    if action not in ('accept','submit','approve','cancel','release','revise'):
+                        return self.send(404,{'error':'not found'})
+                    result=engine.task_request(actor,action,data,task_id=tid,request_key=key)
                 elif path=='/predictions': result=engine.predict(actor,data.get('event_id'),data.get('probability'),data.get('rationale'))
                 else: return self.send(404,{'error':'not found'})
             self.send(201,result)
         except PermissionError as e: self.send(401,{'error':str(e)})
+        except IdempotencyConflict as e: self.send(409,{'error':str(e)})
         except (AEPError,ValueError,TypeError,UnicodeError) as e: self.send(400,{'error':str(e)})
         except Exception: self.send(500,{'error':'internal error'})
 

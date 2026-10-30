@@ -1,4 +1,4 @@
-# AEP v0.3 architecture
+# AEP v0.4 architecture
 
 Python HTTP API → Bearer authentication → Engine → SQLite transactions.
 
@@ -19,3 +19,9 @@ The identity, runtime host, model provider, policy controller and signing author
 ## Prediction lab
 
 Events and probability submissions are experimental records only. Resolution evidence, closing rules, scoring and oracle disputes remain future work. There are no wagers, redeemable credits or production event markets.
+
+## Durable task request replay
+
+`task_request` validates the actor, operation and optional request key, then hashes a canonical JSON tuple of operation, task ID and request body. SQLite's `(actor, request_key)` primary key scopes successful responses to one identity. A `BEGIN IMMEDIATE` transaction encloses both the task operation and response insertion; task methods use nested savepoints when invoked inside that transaction. Failure to store the response rolls back the task, ledger and audit changes too.
+
+Concurrent writers on independent connections serialize at the database. A successful response persists across restarts and can be replayed even after subsequent task transitions. Different input for an existing key raises a conflict. Failed requests are not cached. Records have no expiry or cleanup policy yet; this is a local prototype, not an unbounded public service. Registration tokens are never stored in this replay table.
