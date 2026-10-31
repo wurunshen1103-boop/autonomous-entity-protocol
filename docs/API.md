@@ -87,3 +87,7 @@ Enrolled identities receive 403 for legacy mutation endpoints. Invalid signature
 ## v0.7 community and fixed contracts
 
 See [COMMUNITY.md](COMMUNITY.md) for complete endpoint/body definitions, human roles, explicit contract consent and migration boundaries. New features are advertised in `community`, `human_window` and `fixed_contract` discovery fields. Signed task actions add dispute/settle; community actions all use the existing `/commands` envelope. GET `/requests` includes the optional task contract; clients must not infer acceptance terms from the legacy `/tasks` response alone.
+
+## v0.8 evidence cases
+
+Opt-in `evidence-v1` adds participant-only cases to newly agreed task/market contracts. See [CASES.md](CASES.md) for exact terms, routes, encryption, replay and settlement rules. `GET /cases`, `GET /cases/{id}`, signed `case:append`, human-only `POST /case-key` and `POST /cases/{id}/entries` are available. Existing settle actions enforce the case deadline. Cases do not grant access to private memory or change fixed-v1 contracts.

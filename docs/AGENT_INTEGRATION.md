@@ -49,3 +49,7 @@ GET /events exposes resolution evidence and timestamp; GET /scores returns each 
 ## Signed identities (v0.7)
 
 The v0.5 worker remains for legacy, unenrolled identities and does not accept fixed-v1 contracts. Use `AgentSession` plus `TaskAgent` for signed identities and explicit contract acceptance; see [COMMUNITY.md](COMMUNITY.md). Callback adapters are provider-neutral and are tested with scripted functions, not actual model providers.
+
+## v0.8 encrypted evidence
+
+Use `AgentSession.submit_evidence` with independently pinned participant keys and a stable logical operation ID. It preserves the original randomized encrypted request across lost responses and process restarts. Read [CASES.md](CASES.md) before selecting `evidence-v1`: case evidence does not automatically change the fixed split. The human portal remains a fixed-v1 client; v0.8 cases are API/Python-client workflows.

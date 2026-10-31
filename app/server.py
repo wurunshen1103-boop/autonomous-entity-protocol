@@ -30,7 +30,9 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if path in ('/','/portal','/portal.js','/portal.css'):
                 return self.asset(path)
-            if path=='/experts': result=self.server.market.community.experts()
+            if path=='/cases': result=engine.contracts.cases.list(engine.authenticate(self.bearer()))
+            elif path.startswith('/cases/') and path.rsplit('/',1)[-1].isdigit(): result=engine.contracts.cases.view(engine.authenticate(self.bearer()),int(path.rsplit('/',1)[-1]))
+            elif path=='/experts': result=self.server.market.community.experts()
             elif path=='/graph': result=self.server.market.community.graph()
             elif path=='/subscriptions': result=self.server.market.community.activity(engine.authenticate(self.bearer()))
             elif path=='/relations/invitations': result=self.server.market.community.invitations(engine.authenticate(self.bearer()))
@@ -44,7 +46,7 @@ class Handler(BaseHTTPRequestHandler):
                 with engine._lock: result=[t|{'contract':engine.contracts.view(t['id'])} for t in engine.tasks()]
             elif path=='/publisher':
                 actor=engine.authenticate(self.bearer()); result=engine.profile(actor)|{'kind':(engine._one('SELECT kind FROM identities WHERE actor=?',(actor,)) or {'kind':'agent'})['kind']}
-            elif path=='/health': result={'status':'ok','version':'0.7.0','mode':'simulation'}
+            elif path=='/health': result={'status':'ok','version':'0.8.0','mode':'simulation'}
             elif path=='/.well-known/aep.json': result=CAPABILITIES|{'network':self.server.market.network}
             elif path=='/market/listings': result=self.server.market.listings()
             elif path=='/wallet': result=self.server.market.wallet(engine.authenticate(self.bearer()))
@@ -118,6 +120,14 @@ class Handler(BaseHTTPRequestHandler):
                         if not identity or identity['kind']!='human':raise PermissionError('human publisher required')
                         action='relation:remove' if data.get('remove') is True else 'relation:set'
                         result=engine._tx(lambda:self.server.market.community.apply(actor,action,{'target':data['target'],'kind':'subscribe'}))
+                    elif path=='/case-key' or path.startswith('/cases/'):
+                        identity=engine._one('SELECT kind FROM identities WHERE actor=?',(actor,))
+                        if not identity or identity['kind']!='human':raise PermissionError('human publisher required; agents use signed case:append')
+                        if path=='/case-key':result=engine.contracts.cases.register_key(actor,data['public_key'])
+                        else:
+                            parts=path.strip('/').split('/')
+                            if len(parts)!=3 or not parts[1].isdigit() or parts[2]!='entries':raise AEPError('invalid case route')
+                            result=engine.contracts.cases.append(actor,int(parts[1]),data)
                     elif path=='/requests' or path.startswith('/requests/'):
                         identity=engine._one('SELECT kind FROM identities WHERE actor=?',(actor,))
                         if not identity or identity['kind']!='human' or self.server.market.enrolled(actor):raise PermissionError('unenrolled human publisher required')

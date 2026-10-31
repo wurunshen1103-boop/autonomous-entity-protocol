@@ -104,6 +104,31 @@ class AgentSession:
         env=seal_memory(self.wallet,self.state['network'],self.state['actor'],mid,version+1,document)
         result=self.command(operation,'memory:put',{'id':mid,'expected_version':version,'envelope':env})
         self.state['memory_versions'][mid]=result['version'];self.save();return result
+    def submit_evidence(self,operation,case_id,entry_id,document,*,trusted_recipients,kind='evidence',reply_to=None):
+        """Persist encrypted evidence intent before signing; retry without re-encryption."""
+        from .evidence import seal_evidence
+        intent={'case_id':case_id,'entry_id':entry_id,'document':document,
+                'trusted_recipients':trusted_recipients,'kind':kind,'reply_to':reply_to}
+        intents=self.state.setdefault('evidence_intents',{})
+        previous=intents.get(operation)
+        if previous is None and (operation in self.state['receipts'] or (self.state['pending'] and self.state['pending']['operation']==operation)):
+            raise ValueError('operation id already belongs to another command')
+        if previous is not None and previous!=intent:raise ValueError('evidence operation id reused')
+        intents[operation]=intent;self.save()
+        old=self.state['receipts'].get(operation)
+        if old:
+            if old['intent']['action']!='case:append':raise ValueError('operation id reused')
+            return self.command(operation,'case:append',old['intent']['body'])
+        pending=self.state['pending']
+        if pending:
+            if pending['operation']!=operation or pending['intent']['action']!='case:append':raise ValueError('resolve pending command first')
+            return self.retry_pending()
+        case=self.client.request('GET',f'/cases/{case_id}')
+        if case['network']!=self.state['network']:raise ValueError('case network mismatch')
+        entry=seal_evidence(self.wallet.decrypt,case,self.state['actor'],entry_id,document,
+                            trusted_recipients=trusted_recipients,kind=kind,reply_to=reply_to)
+        return self.command(operation,'case:append',{'case_id':case_id,'entry':entry})
+
     def recall(self,mid):
         row=self.client.request('GET','/memories/'+mid)
         if row['version']<self.state['memory_versions'].get(mid,0):raise ValueError('memory rollback detected')

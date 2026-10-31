@@ -103,6 +103,7 @@ class Market:
         self.e.db.execute('INSERT INTO ledger(sender,receiver,amount,reason,created_at) VALUES (?,?,?,?,?)',(sender,receiver,amount,reason,int(time.time())))
     def _apply(self,actor,w,action,b,envelope):
         db=self.e.db
+        if action=='case:append':return self.e.contracts.cases.append(actor,b['case_id'],b['entry'])
         if isinstance(action,str) and action.startswith(('profile:','relation:','project:','memory:')):
             return self.community.apply(actor,action,b)
         if action in ('dispute','settle'):return market_rules.apply(self,actor,action,b)

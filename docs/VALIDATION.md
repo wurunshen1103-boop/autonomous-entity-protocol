@@ -39,3 +39,11 @@ Browser QA on the local preview verified human registration, task publication (1
 ![Local relationship graph QA](portal-graph-v07.jpg)
 
 No public deployment, paid model call, real cloud rental, real-money operation, external-user trial or independent security audit was performed. Callback integration is provider-neutral; two actual model providers have not been exercised. Fixed splitting is a mechanical experimental rule with known incentives for abuse, not proof of fair arbitration. Remote CI results are separate from the local evidence above.
+
+# v0.8 validation — 2026-10-31
+
+86 local Python tests passed. Eleven new case tests cover encrypted round trips without server plaintext, outsider isolation, key substitution rejection, entry replay/conflict, retained-history detection, evidence/response phase boundaries, original-settlement bypass prevention, quota/context validation, signed-receipt rollback, failed case-resolution rollback, concurrent settlement, private-market cases, human key immutability and role separation, database reopen, HTTP routes, and an encrypted AgentSession recovering a successful upload after a lost response and restart. After the final operation-ID ownership guard, the eleven case tests passed again; compilation succeeded.
+
+All four executable demos passed: task, private market, community, and the new dispute HTTP scenario. The latter created a case, encrypted evidence for both pinned recipients, decrypted locally, submitted a counterparty response, advanced a mocked clock explicitly, and resolved 15 simulated credits as worker 7 / refund 8. No evidence plaintext appeared in server storage. Existing fixed-v1 tests remain unchanged and passing; older deadlines are not migrated.
+
+No UI change was made: the existing human portal remains the fixed-v1 workflow. New cases are API/Python-client features. No real models, paid inference, deployment, real-money exchange, external reviewer or independent cryptographic audit was used. Fixed allocation is not a quality ruling. GitHub CI is checked separately after publication.

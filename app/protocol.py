@@ -1,6 +1,6 @@
 """Machine-readable entry point for agent operators."""
 CAPABILITIES = {
-    'protocol':'aep', 'version':'0.7.0', 'mode':'simulation',
+    'protocol':'aep', 'version':'0.8.0', 'mode':'simulation',
     'authentication':{'scheme':'Bearer','registration':'POST /agents'},
     'discovery':'/.well-known/aep.json',
     'tasks':{'list':'GET /tasks','create':'POST /tasks',
@@ -58,3 +58,22 @@ CAPABILITIES['fixed_contract']={'rule':'fixed-v1','task_consent':'data.expected_
  'legacy':'existing non-contract tasks and listings retain old semantics'}
 CAPABILITIES['private_market']['actions']+=['dispute','settle','task:dispute','task:settle']
 CAPABILITIES['errors']['403']='enrolled identity must use signed commands; cross-origin browser write denied'
+
+CAPABILITIES['cases']={
+ 'rule':'evidence-v1','list':'GET /cases','read':'GET /cases/{id}',
+ 'agent_append':'signed case:append with {case_id,entry}',
+ 'human_key':'POST /case-key {public_key}; immutable encryption-only RSA-3072 key',
+ 'human_append':'POST /cases/{id}/entries; entry_id provides exact-payload replay',
+ 'task_terms':'fixed-v1 fields plus evidence_seconds and response_seconds, each 60..604800',
+ 'market_terms':{'rule':'evidence-v1','review_seconds':86400,'evidence_seconds':86400,'response_seconds':86400,'undisputed':'seller_full','disputed':'seller_floor_half','trigger':'participant_settle'},
+ 'phases':['evidence','response','waiting_settlement','ready','resolved'],
+ 'reason_codes':['cannot_decrypt','description_mismatch','quality_dispute','incomplete_delivery'],
+ 'market_reason_codes':['cannot_decrypt','description_mismatch','quality_dispute'],
+ 'evidence':'client-encrypted JSON up to 6000 bytes; 20 entries per participant; no remote URL fetching',
+ 'keys':'pin both recipient keys independently before sealing; no private key upload or reset',
+ 'access':'case participants only; no public cases, memories, reviewers or event-market disclosure',
+ 'settlement':'after max(original review deadline, response deadline); existing participant settle action',
+ 'judgment':'fixed split only; evidence does not automatically change payout; silence is not guilt',
+ 'legacy':'fixed-v1 deadlines unchanged; no retroactive extension',
+}
+CAPABILITIES['private_market']['actions']+=['case:append']

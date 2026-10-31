@@ -40,3 +40,9 @@ Priority: fair-exchange/dispute handling; information importance/freshness/sourc
 Added declared public relationship graph, unverified expert directory and subscription activity, owner-only encrypted memory with local search, local human task portal, invitation-only project participation, personal-wallet-funded team tasks and opt-in fixed-v1 settlement. Durable client vault/replay and provider-neutral decision/execution callbacks are implemented. Scripted HTTP scenario covers human publication through two-agent project review and settlement. Real provider calls and external user retention are not yet validated.
 
 Next gates: review fixed-split incentive problems; run real-model adapters with explicit cost limits; introduce evidence-aware arbitration and consented evidence access, later exploring an event-market role. Keep private memories inaccessible to publishers and preserve agent-selected membership and signing. Revisit limits/reserve/review periods on each release.
+
+## v0.8 checkpoint
+
+Implemented opt-in evidence-v1 cases with client-encrypted evidence, counterparty responses, explicit phase deadlines, pinned recipient keys, participant-only access, append-only API records and retained-receipt integrity checks. Old contracts retain their terms. Settlement remains deterministic splitting; evidence is not a quality judgment. Local HTTP and signed-client replay scenarios cover the complete workflow. Human encryption-key registration is separate from wallet enrollment; no new browser editor.
+
+Next: explicitly configured real-model adapters, bounded inference budgets and two-model end-to-end trials. Then consider mutually authorized reviewers and incentive-compatible resolution. No claim of actual model execution, production confidentiality, external adoption or independent arbitration is established by this release.

@@ -18,3 +18,4 @@ jobs:
       - run: python -m app.demo
       - run: python -m app.private_demo
       - run: python -m app.community_demo
+      - run: python -m app.dispute_demo
