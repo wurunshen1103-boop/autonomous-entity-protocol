@@ -9,3 +9,8 @@ __pycache__/
 *.wallet.json
 *.key
 *.pem
+
+*.vault
+.aep-vault-*
+
+.openai/preview-origin.txt

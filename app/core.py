@@ -9,6 +9,7 @@ import threading
 from functools import wraps
 
 SCHEMA = '''
+CREATE TABLE IF NOT EXISTS identities (actor TEXT PRIMARY KEY, kind TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS resolutions (event_id INTEGER PRIMARY KEY, evidence TEXT NOT NULL, resolved_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS idempotency (actor TEXT NOT NULL, request_key TEXT NOT NULL, request_hash TEXT NOT NULL, response_json TEXT NOT NULL, created_at INTEGER NOT NULL, PRIMARY KEY(actor, request_key));
 CREATE TABLE IF NOT EXISTS audit (id INTEGER PRIMARY KEY AUTOINCREMENT, actor TEXT NOT NULL, action TEXT NOT NULL, task_id INTEGER NOT NULL, created_at INTEGER NOT NULL);
@@ -37,6 +38,8 @@ class Engine:
         self.db = sqlite3.connect(path, isolation_level=None, check_same_thread=False)
         self.db.row_factory = sqlite3.Row
         self.db.executescript('PRAGMA foreign_keys=ON; '+SCHEMA)
+        from .contracts import Contracts
+        self.contracts=Contracts(self)
 
     def _one(self, sql, params=()):
         row = self.db.execute(sql, params).fetchone()
@@ -75,7 +78,9 @@ class Engine:
         """
         self.profile(actor)
         if not isinstance(data,dict): raise AEPError('JSON object required')
-        if action=='create' and task_id is None:
+        if (action=='create' and 'contract' in data) or (task_id is not None and self.contracts.get(task_id)):
+            call=lambda:self._tx(lambda:self.contracts.request(actor,action,data,task_id))
+        elif action=='create' and task_id is None:
             call=lambda:self.create_task(actor,data.get('title'),data.get('description'),data.get('reward'))
         elif action in ('accept','submit','approve','cancel','release','revise') and type(task_id) is int and task_id>0:
             if action=='submit': call=lambda:self.submit(actor,task_id,data.get('submission'))
@@ -104,12 +109,14 @@ class Engine:
         return self._tx(work)
 
     @serialized
-    def register(self, name):
+    def register(self, name, kind='agent'):
+        if kind not in ('agent','human'):raise AEPError('invalid identity kind')
         if not isinstance(name,str) or not 2 <= len(name.strip()) <= 40: raise AEPError('name must be 2-40 characters')
         agent_id = 'agt_'+secrets.token_hex(8)
         token = secrets.token_urlsafe(32)
         def work():
             self.db.execute('INSERT INTO agents VALUES (?,?,?,?,?)',(agent_id,name.strip(),hashlib.sha256(token.encode()).hexdigest(),100,int(time.time())))
+            self.db.execute('INSERT INTO identities VALUES (?,?)',(agent_id,kind))
             self.db.execute('INSERT INTO ledger(sender,receiver,amount,reason,created_at) VALUES (?,?,?,?,?)',(None,agent_id,100,'demo genesis grant',int(time.time())))
             return {'agent_id':agent_id,'api_token':token,'demo_balance':100}
         return self._tx(work)
@@ -147,6 +154,8 @@ class Engine:
         if type(reward) is not int or reward<=0 or reward>1000000: raise AEPError('invalid reward')
         def work():
             bal=self.profile(actor)['balance']
+            identity=self._one('SELECT kind FROM identities WHERE actor=?',(actor,))
+            if identity and identity['kind']=='human' and (reward>30 or bal-reward<30):raise AEPError('publisher policy: max 30, reserve 30')
             if bal<reward: raise AEPError('insufficient demo credits')
             self.db.execute('UPDATE agents SET balance=balance-? WHERE id=?',(reward,actor))
             cur=self.db.execute('INSERT INTO tasks(creator,title,description,reward,status,created_at) VALUES (?,?,?,?,?,?)',(actor,title.strip(),description.strip(),reward,'open',int(time.time())))
@@ -162,10 +171,16 @@ class Engine:
     @serialized
     def accept(self, actor, task_id):
         self.profile(actor)
+        identity=self._one('SELECT kind FROM identities WHERE actor=?',(actor,))
+        if identity and identity['kind']=='human':raise AEPError('human publishers cannot accept tasks')
         def work():
             t=self._one('SELECT * FROM tasks WHERE id=?',(task_id,))
             if not t or t['status']!='open': raise AEPError('task not open')
             if t['creator']==actor: raise AEPError('cannot accept own task')
+            if self._one("SELECT name FROM sqlite_master WHERE type='table' AND name='project_tasks'"):
+                project=self._one('SELECT project_id FROM project_tasks WHERE task_id=?',(task_id,))
+                if project and not self._one("SELECT 1 FROM project_members WHERE project_id=? AND actor=? AND state='active'",(project['project_id'],actor)):
+                    raise PermissionError('project task requires active project membership')
             self.db.execute("UPDATE tasks SET worker=?,status='accepted' WHERE id=?",(actor,task_id))
             self._audit(actor, 'accepted', task_id)
             return {'task_id':task_id,'status':'accepted'}

@@ -10,6 +10,7 @@ import time
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa,ed25519
 from .core import AEPError,IdempotencyConflict
+from . import market_rules
 from .wallet import DOMAIN,canonical,unb64,verify,wallet_id,content_digest
 
 SCHEMA='''
@@ -38,7 +39,10 @@ class Market:
         self.e=engine
         with engine._lock:
             engine.db.executescript(SCHEMA)
+            market_rules.ensure_schema(engine)
             engine.db.execute('INSERT OR IGNORE INTO market_config VALUES (1,?)',('aep-'+secrets.token_hex(16),))
+            from .community import Community
+            self.community=Community(self)
             self.network=engine._one('SELECT network FROM market_config WHERE id=1')['network']
     def enrolled(self,actor):
         with self.e._lock: return self.e._one('SELECT * FROM wallets WHERE actor=?',(actor,))
@@ -49,6 +53,8 @@ class Market:
             return {k:w[k] for k in ('wallet_id','next_seq','frozen','max_order','reserve')}|{'balance':self.e.profile(actor)['balance'],'network':self.network}
     def enroll(self,actor,envelope):
         with self.e._lock:
+            identity=self.e._one('SELECT kind FROM identities WHERE actor=?',(actor,))
+            if identity and identity['kind']=='human':raise AEPError('human publisher uses the separate task window')
             msg=envelope['message']
             if set(msg)!={'domain','network','action','actor','spend_public','encryption_public','recovery_public'} or msg['actor']!=actor or msg['network']!=self.network or msg['domain']!=DOMAIN or msg['action']!='enroll': raise AEPError('invalid enrollment context')
             verify(msg['spend_public'],msg,envelope['signature'])
@@ -97,6 +103,9 @@ class Market:
         self.e.db.execute('INSERT INTO ledger(sender,receiver,amount,reason,created_at) VALUES (?,?,?,?,?)',(sender,receiver,amount,reason,int(time.time())))
     def _apply(self,actor,w,action,b,envelope):
         db=self.e.db
+        if isinstance(action,str) and action.startswith(('profile:','relation:','project:','memory:')):
+            return self.community.apply(actor,action,b)
+        if action in ('dispute','settle'):return market_rules.apply(self,actor,action,b)
         if action=='policy':
             if w['frozen']: raise AEPError('cannot change policy while frozen')
             maximum=integer(b['max_order'],1,1000000);reserve=integer(b['reserve'],0,1000000)
@@ -107,6 +116,7 @@ class Market:
             db.execute('INSERT OR REPLACE INTO backups VALUES (?,?)',(actor,value))
             return {'stored':'ciphertext only'}
         if action=='list':
+            market_rules.listing_metadata(b)
             if not isinstance(b['title'],str) or not 1<=len(b['title'])<=120: raise AEPError('invalid public title')
             price=integer(b['price'],1,1000000);capacity=integer(b['capacity'],1,1000)
             if b.get('resale',False) is not False: raise AEPError('v0.6 supports non-transferable licenses only')
@@ -117,6 +127,9 @@ class Market:
             listing=self.e._one('SELECT * FROM listings WHERE id=?',(integer(b['listing_id'],1,2**53-1),))
             if not listing or listing['seller']==actor: raise AEPError('invalid seller or listing')
             if b.get('expected_price')!=listing['price'] or b.get('expected_digest')!=listing['digest']: raise AEPError('listing terms mismatch')
+            extra=market_rules.extras(listing)
+            if extra['settlement'] and b.get('expected_terms_hash')!=extra['terms_hash']:raise AEPError('explicit settlement terms acceptance required')
+            if extra['metadata'].get('valid_until',2**53-1)<=int(time.time()):raise AEPError('information expired')
             active=db.execute("SELECT COUNT(*) FROM orders WHERE listing_id=? AND state!='refunded'",(listing['id'],)).fetchone()[0]
             if active>=listing['capacity']: raise AEPError('license inventory exhausted')
             if db.execute("SELECT 1 FROM orders WHERE listing_id=? AND buyer=? AND state!='refunded'",(listing['id'],actor)).fetchone(): raise AEPError('already ordered')
@@ -132,9 +145,12 @@ class Market:
             if action=='deliver':
                 if actor!=order['seller'] or order['state']!='funded' or int(time.time())>=order['deadline']: raise AEPError('delivery unavailable')
                 if len(unb64(b['wrapped_key']))!=384: raise AEPError('RSA-3072 wrapped key required')
-                db.execute("UPDATE orders SET state='delivered',wrapped_key=?,delivery_proof=? WHERE id=?",(b['wrapped_key'],json.dumps(envelope),order['id']))
+                listing=self.e._one('SELECT * FROM listings WHERE id=?',(order['listing_id'],))
+                terms=market_rules.extras(listing)['settlement']
+                review=int(time.time())+terms['review_seconds'] if terms else None
+                db.execute("UPDATE orders SET state='delivered',wrapped_key=?,delivery_proof=?,review_deadline=? WHERE id=?",(b['wrapped_key'],json.dumps(envelope),review,order['id']))
             elif action=='confirm':
-                if actor!=order['buyer'] or order['state']!='delivered': raise AEPError('only buyer can confirm delivered order')
+                if actor!=order['buyer'] or order['state']!='delivered' or order['dispute']: raise AEPError('only buyer can confirm delivered order')
                 db.execute("UPDATE orders SET state='completed' WHERE id=?",(order['id'],))
                 db.execute('UPDATE agents SET balance=balance+? WHERE id=?',(order['amount'],order['seller']))
                 db.execute('INSERT INTO licenses VALUES (?,?,?,0)',(order['id'],order['listing_id'],actor))
@@ -172,14 +188,14 @@ class Market:
             return self.e._tx(work)
     def listings(self):
         with self.e._lock:
-            return [dict(r)|{'license':'nonexclusive-personal-no-resale'} for r in self.e.db.execute('SELECT l.id,l.seller,w.wallet_id AS seller_wallet,l.title,l.price,l.capacity,l.digest FROM listings l JOIN wallets w ON l.seller=w.actor ORDER BY l.id DESC LIMIT 100')]
+            return [{k:r[k] for k in ('id','seller','seller_wallet','title','price','capacity','digest')}|market_rules.extras(dict(r))|{'license':'nonexclusive-personal-no-resale','ratings':'seller-declared, unverified'} for r in self.e.db.execute('SELECT l.*,w.wallet_id AS seller_wallet FROM listings l JOIN wallets w ON l.seller=w.actor ORDER BY l.id DESC LIMIT 100')]
     def order(self,actor,order_id):
         with self.e._lock:
             order=self.e._one('SELECT * FROM orders WHERE id=?',(order_id,))
             if not order or actor not in (order['buyer'],order['seller']): raise PermissionError('order participant required')
             listing=self.e._one('SELECT * FROM listings WHERE id=?',(order['listing_id'],))
             buyer=self.enrolled(order['buyer']);seller=self.enrolled(order['seller'])
-            return order|{'purchase_proof':json.loads(order['purchase_proof']),'buyer_wallet':buyer['wallet_id'],'buyer_encryption_public':buyer['encryption_public'],'buyer_certificate':json.loads(buyer['certificate']),
+            return order|market_rules.extras(listing)|{'purchase_proof':json.loads(order['purchase_proof']),'buyer_wallet':buyer['wallet_id'],'buyer_encryption_public':buyer['encryption_public'],'buyer_certificate':json.loads(buyer['certificate']),
                           'seller_spend_public':seller['spend_public'],'digest':listing['digest'],'blob':json.loads(listing['blob']),
                           'listing_proof':json.loads(listing['proof']), 'delivery_proof':json.loads(order['delivery_proof']) if order['delivery_proof'] else None,
                           'license':self.e._one('SELECT * FROM licenses WHERE order_id=?',(order_id,))}

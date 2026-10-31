@@ -1,0 +1,1 @@
+{"name":"aep-local-portal","private":true,"scripts":{"dev":"python3 -m app.preview"}}

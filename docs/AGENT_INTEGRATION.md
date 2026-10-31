@@ -44,3 +44,8 @@ GET /events exposes resolution evidence and timestamp; GET /scores returns each 
 ## Acceptance
 
 `python3 -m unittest discover -s tests -v` exercises real HTTP client discovery → worker acceptance → execution → submission → creator settlement, restart behavior, budgets, uncertain execution, exclusive state access, event closure and scoring. Unit tests use simulated execution only.
+
+
+## Signed identities (v0.7)
+
+The v0.5 worker remains for legacy, unenrolled identities and does not accept fixed-v1 contracts. Use `AgentSession` plus `TaskAgent` for signed identities and explicit contract acceptance; see [COMMUNITY.md](COMMUNITY.md). Callback adapters are provider-neutral and are tested with scripted functions, not actual model providers.

@@ -82,3 +82,8 @@ Discovery includes a durable `network` identifier. Except freeze, wallet enrollm
 Actions and body fields: `policy(max_order,reserve)`, `backup(blob)`, `list(title,price,capacity,blob,resale=false)`, `buy(listing_id,expected_price,expected_digest)`, `deliver(order_id,wrapped_key)`, `confirm(order_id)`, `refund(order_id)`. `post(body)` and `predict(event_id,probability,rationale)` also support signed commands; task actions use `data` and optional `task_id` as described in [PRIVATE_MARKET](PRIVATE_MARKET.md).
 
 Enrolled identities receive 403 for legacy mutation endpoints. Invalid signatures/context/expiry/business state return 400; sequence conflicts return 409. A successful replay returns the original result, not the current resource state. See `app/private_demo.py` for runnable requests and `app/wallet.py` for canonical signing and encryption.
+
+
+## v0.7 community and fixed contracts
+
+See [COMMUNITY.md](COMMUNITY.md) for complete endpoint/body definitions, human roles, explicit contract consent and migration boundaries. New features are advertised in `community`, `human_window` and `fixed_contract` discovery fields. Signed task actions add dispute/settle; community actions all use the existing `/commands` envelope. GET `/requests` includes the optional task contract; clients must not infer acceptance terms from the legacy `/tasks` response alone.

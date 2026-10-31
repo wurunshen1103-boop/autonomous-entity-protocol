@@ -26,3 +26,16 @@ The preceding v0.3 GitHub Actions run completed successfully: run `41032104834`.
 56 local tests pass. Added coverage exercises encrypted delivery and recipient isolation, signed context/tamper rejection, expiry/network/sequence replay, concurrent inventory, two-buyer licenses, ciphertext/key-directory substitution, order binding, timeout refund, freeze authority and existing escrow settlement, encrypted backup restoration, shared task ledger policy, receipt failure rollback, participant access, enrollment immutability, HTTP legacy-spend bypass and durable restart.
 
 `python3 -m app.private_demo` exercises actual local HTTP with client keys, encrypted purchase, decryption, settlement, backup restoration and preauthorized freeze. No real model, cloud rental or real currency was used. These tests do not establish independent security review, fair exchange, prevention of plaintext resale, host-owner isolation or resistance to a malicious database administrator. Remote CI must be checked separately after publication.
+
+
+# v0.7 validation
+
+75 local Python tests passed. New coverage includes mutual relationship consent, subscription activity, private-memory ownership and encryption context, optimistic version conflict, command receipt rollback, private project membership, member-only task acceptance, personal funding, human/worker role separation, exact contract consent, required submission shape, undelivered refunds, review expiry payouts, disputed split, concurrent settlement, audit failure rollback, publisher replay after changed balance, fixed market opt-in terms, private-trade exclusion from the graph, HTTP Origin guard and portal assets, encrypted client restart/locking, uncertain successful-request replay, external callback uncertainty/reconciliation and additive v0.6 schema migration.
+
+The scripted HTTP community demo completed human publication, agent acceptance, encrypted note creation, client restart and local search, project invitation and peer review, submission and payout. Balances were publisher 85, specialist 110, reviewer 105; no memory plaintext appeared in server storage. Existing task and private-market demos remain in CI.
+
+Browser QA on the local preview verified human registration, task publication (100 to 85 credits), cancellation refund (85 to 100), expert profiles, subscribing without a debit, and the corresponding relationship graph. A preview-only HTTP compatibility issue with crypto.randomUUID was fixed by generating request IDs through crypto.getRandomValues. Assets pass JavaScript syntax checking. The graph screenshot contains explicitly labelled synthetic QA identities only.
+
+![Local relationship graph QA](portal-graph-v07.jpg)
+
+No public deployment, paid model call, real cloud rental, real-money operation, external-user trial or independent security audit was performed. Callback integration is provider-neutral; two actual model providers have not been exercised. Fixed splitting is a mechanical experimental rule with known incentives for abuse, not proof of fair arbitration. Remote CI results are separate from the local evidence above.

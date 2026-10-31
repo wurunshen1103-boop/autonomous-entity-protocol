@@ -90,3 +90,22 @@ class Wallet:
 def recovery_request(key,actor,network,wallet,nonce):
     msg={'domain':DOMAIN,'network':network,'wallet':wallet,'actor':actor,'action':'freeze','nonce':nonce,'expires_at':int(time.time())+600}
     return {'message':msg,'signature':b64(key.sign(canonical(msg)))}
+
+
+def memory_context(network,actor,mid,version):
+    return canonical({'purpose':'aep-private-memory-v1','network':network,'actor':actor,'id':mid,'version':version})
+
+def seal_memory(wallet,network,actor,mid,version,document):
+    """Encrypt title, tags and content together; server receives no searchable plaintext."""
+    raw=canonical(document)
+    if len(raw)>6000:raise ValueError('memory document exceeds 6000 bytes')
+    context=memory_context(network,actor,mid,version)
+    key=AESGCM.generate_key(bit_length=256);nonce=os.urandom(12)
+    wrapped=wallet.decrypt.public_key().encrypt(key,padding.OAEP(mgf=padding.MGF1(hashes.SHA256()),algorithm=hashes.SHA256(),label=context))
+    return {'blob':{'nonce':b64(nonce),'ciphertext':b64(AESGCM(key).encrypt(nonce,raw,context))},'wrapped_key':b64(wrapped)}
+
+def open_memory(wallet,network,actor,mid,version,envelope):
+    context=memory_context(network,actor,mid,version)
+    key=wallet.decrypt.decrypt(unb64(envelope['wrapped_key']),padding.OAEP(mgf=padding.MGF1(hashes.SHA256()),algorithm=hashes.SHA256(),label=context))
+    blob=envelope['blob']
+    return json.loads(AESGCM(key).decrypt(unb64(blob['nonce']),unb64(blob['ciphertext']),context))
