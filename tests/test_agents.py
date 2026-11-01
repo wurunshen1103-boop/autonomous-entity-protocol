@@ -21,7 +21,7 @@ class AgentTests(unittest.TestCase):
         self.s.shutdown();self.t.join();self.s.server_close();self.e.close();self.temp.cleanup()
     def task(self):return self.e.create_task(self.a['agent_id'],'Summarize','Public data',15)['task_id']
     def test_discovery_worker_submission_restart_and_settlement(self):
-        self.assertEqual(self.client.request('GET','/.well-known/aep.json')['version'],'0.8.0')
+        self.assertEqual(self.client.request('GET','/.well-known/aep.json')['version'],'0.9.0')
         tid=self.task();w=Worker(self.client,self.state)
         self.assertEqual(w.run()[0]['phase'],'submitted');w.close()
         w=Worker(self.client,self.state);self.assertEqual(len(w.run()),1);w.close()

@@ -46,7 +46,7 @@ class Handler(BaseHTTPRequestHandler):
                 with engine._lock: result=[t|{'contract':engine.contracts.view(t['id'])} for t in engine.tasks()]
             elif path=='/publisher':
                 actor=engine.authenticate(self.bearer()); result=engine.profile(actor)|{'kind':(engine._one('SELECT kind FROM identities WHERE actor=?',(actor,)) or {'kind':'agent'})['kind']}
-            elif path=='/health': result={'status':'ok','version':'0.8.0','mode':'simulation'}
+            elif path=='/health': result={'status':'ok','version':'0.9.0','mode':'simulation'}
             elif path=='/.well-known/aep.json': result=CAPABILITIES|{'network':self.server.market.network}
             elif path=='/market/listings': result=self.server.market.listings()
             elif path=='/wallet': result=self.server.market.wallet(engine.authenticate(self.bearer()))
@@ -136,7 +136,7 @@ class Handler(BaseHTTPRequestHandler):
                             result=engine.task_request(actor,'create',data,request_key=key)
                         else:
                             parts=path.strip('/').split('/')
-                            if len(parts)!=3 or not parts[1].isdigit() or parts[2] not in ('approve','dispute','settle','cancel'):raise AEPError('invalid publisher action')
+                            if len(parts)!=3 or not parts[1].isdigit() or parts[2] not in ('approve','dispute','settle','cancel','accept_partial'):raise AEPError('invalid publisher action')
                             result=engine.task_request(actor,parts[2],data,task_id=int(parts[1]),request_key=key)
                     elif self.server.market.enrolled(actor):
                         return self.send(403,{'error':'wallet enrolled: signed /commands required for mutations'})
@@ -146,7 +146,7 @@ class Handler(BaseHTTPRequestHandler):
                         parts=path.strip('/').split('/')
                         if len(parts)!=3 or not parts[1].isdigit(): return self.send(404,{'error':'not found'})
                         tid=int(parts[1]); action=parts[2]
-                        if action not in ('accept','submit','approve','cancel','release','revise','dispute','settle'):
+                        if action not in ('accept','submit','approve','cancel','release','revise','dispute','settle','fail','offer_partial','accept_partial'):
                             return self.send(404,{'error':'not found'})
                         result=engine.task_request(actor,action,data,task_id=tid,request_key=key)
                     elif path=='/predictions': result=engine.predict(actor,data.get('event_id'),data.get('probability'),data.get('rationale'))

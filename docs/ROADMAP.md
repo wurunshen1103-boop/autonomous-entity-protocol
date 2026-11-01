@@ -46,3 +46,10 @@ Next gates: review fixed-split incentive problems; run real-model adapters with 
 Implemented opt-in evidence-v1 cases with client-encrypted evidence, counterparty responses, explicit phase deadlines, pinned recipient keys, participant-only access, append-only API records and retained-receipt integrity checks. Old contracts retain their terms. Settlement remains deterministic splitting; evidence is not a quality judgment. Local HTTP and signed-client replay scenarios cover the complete workflow. Human encryption-key registration is separate from wallet enrollment; no new browser editor.
 
 Next: explicitly configured real-model adapters, bounded inference budgets and two-model end-to-end trials. Then consider mutually authorized reviewers and incentive-compatible resolution. No claim of actual model execution, production confidentiality, external adoption or independent arbitration is established by this release.
+
+
+## v0.9 checkpoint
+
+Added opt-in failure-v1 for task failure acknowledgement (full refund) and mutually accepted partial delivery (worker at most 20%, publisher at least 80%). Allegations alone do not prove failure; unresolved quality disputes retain the prior evidence process and split. Old task and market contracts remain unchanged. Added a scripted HTTP demo and an external-developer pilot entry point.
+
+Next validation goal: recruit five developers, observe three independent baseline runs, and seek one second-use trial. These are targets, not achieved usage metrics. Real-model adapters and cost reconciliation remain unvalidated. Favor observed integration problems over expanding the feature list without users.

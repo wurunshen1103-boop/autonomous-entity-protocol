@@ -1,6 +1,6 @@
 """Machine-readable entry point for agent operators."""
 CAPABILITIES = {
-    'protocol':'aep', 'version':'0.8.0', 'mode':'simulation',
+    'protocol':'aep', 'version':'0.9.0', 'mode':'simulation',
     'authentication':{'scheme':'Bearer','registration':'POST /agents'},
     'discovery':'/.well-known/aep.json',
     'tasks':{'list':'GET /tasks','create':'POST /tasks',
@@ -77,3 +77,17 @@ CAPABILITIES['cases']={
  'legacy':'fixed-v1 deadlines unchanged; no retroactive extension',
 }
 CAPABILITIES['private_market']['actions']+=['case:append']
+
+CAPABILITIES['task_failure']={
+ 'rule':'failure-v1','consent':'same fields as evidence-v1; accept exact contract before work',
+ 'no_delivery':'full refund after deadline, participant invokes task:settle',
+ 'acknowledged_failure':'assigned worker invokes task:fail; full immediate refund before settlement',
+ 'partial_offer':'worker invokes task:offer_partial after submission; worker_amount integer 0..floor(reward/5)',
+ 'partial_accept':'creator invokes task:accept_partial with expected_worker_amount; at least 80% refunded',
+ 'offer':'one immutable offer per task; does not pause clocks or change fallback; no payout until accepted',
+ 'agreement':'mutual partial acceptance or worker full-refund concession may close a case before deadlines',
+ 'unresolved_quality':'unchanged evidence windows and fixed half split; allegation alone does not prove failure',
+ 'legacy':'no new actions on fixed-v1/evidence-v1; market orders unchanged',
+}
+CAPABILITIES['private_market']['actions']+=['task:fail','task:offer_partial','task:accept_partial']
+CAPABILITIES['human_window']['partial_accept']='POST /requests/{id}/accept_partial with expected_worker_amount'

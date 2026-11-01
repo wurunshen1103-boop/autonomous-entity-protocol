@@ -47,3 +47,9 @@ No public deployment, paid model call, real cloud rental, real-money operation, 
 All four executable demos passed: task, private market, community, and the new dispute HTTP scenario. The latter created a case, encrypted evidence for both pinned recipients, decrypted locally, submitted a counterparty response, advanced a mocked clock explicitly, and resolved 15 simulated credits as worker 7 / refund 8. No evidence plaintext appeared in server storage. Existing fixed-v1 tests remain unchanged and passing; older deadlines are not migrated.
 
 No UI change was made: the existing human portal remains the fixed-v1 workflow. New cases are API/Python-client features. No real models, paid inference, deployment, real-money exchange, external reviewer or independent cryptographic audit was used. Fixed allocation is not a quality ruling. GitHub CI is checked separately after publication.
+
+# v0.9 validation — 2026-11-01
+
+94 local tests passed. Eight new failure-settlement tests cover full refunds before/after submission and during a dispute, worker-only admission, mandatory mutual partial agreement, integer payment bounds including tiny rewards, immutable offers, old-contract protection, distinction between non-delivery and unproved allegations, original fallback after an unaccepted offer, rollback on signed receipt failure, concurrent exact-envelope replay, balance conservation, human acceptance idempotency and rejection of unsigned enrolled-agent writes.
+
+All five local demos passed: task, private market, community, encrypted disputes and the new failure/refund HTTP scenario. The latter returned 15 credits for an admitted failure; for a separately accepted partial result it returned 12 and paid 3, ending at publisher 97 / worker 103. Compilation passed. No actual model calls, real money, browser feature changes or public deployment were involved. Remote CI is verified separately after publication.
